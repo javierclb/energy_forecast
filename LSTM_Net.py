@@ -7,11 +7,11 @@ import pandas as pd
 import numpy as np
 
 
-def norm(x,train_stats):
+def norm(x, train_stats):
     return (x - train_stats['mean']) / train_stats['std']
 
 
-def prep_lstm(all_X,all_y,n,hours_prior):
+def prep_lstm(all_X, all_y, n, hours_prior):
 
 	X_train, y_train = all_X[:-n], all_y[:-n]
 	X_test, y_test = all_X[-n:],all_y[-n:]
@@ -36,22 +36,26 @@ def prep_lstm(all_X,all_y,n,hours_prior):
 	return reshape_input, dense_input_train, reshape_input_test, dense_input_test, shape, y_train
 
 
-def LSTM_Model(all_X, all_y, EPOCHS=100,n=8760,hours_prior=24):
+def LSTM_Model(all_X,
+               all_y,
+               EPOCHS=100,
+               n=8760,
+               hours_prior=24):
 	
-    reshape_input,dense_input_train,reshape_input_test,dense_input_test,shape,y_train=prep_lstm(all_X, all_y, n, hours_prior)
+    reshape_input, dense_input_train, reshape_input_test, dense_input_test, shape,y_train = prep_lstm(all_X, all_y, n, hours_prior)
 
-    ###############################Arquitectura red neuronal mixta##############################################
+    ###############################Mix Neural Net Arquitecture##############################################
 
-    first_input = Input(shape=(shape[1],1))
-    seq = LSTM(units=20, dropout=0.2)(first_input)
+    first_input = Input(shape=(shape[1], 1))
+    seq = LSTM(units=20, dropout=0.1)(first_input)
     seq = Dense(40, activation=tf.nn.relu)(seq)
-    seq = Dropout(0.3)(seq)
+    seq = Dropout(0.1)(seq)
     second_input = Input(shape=(dense_input_train.shape[1], ))
     reg = Dense(40, activation=tf.nn.relu)(second_input)
-    reg = Dropout(0.3)(reg)
+    reg = Dropout(0.1)(reg)
     merged = Concatenate(axis=1)([seq, reg])
     output = Dense(80, activation=tf.nn.relu )(merged)
-    #output=Dropout(0.3)(output)
+    output=Dropout(0.1)(output)
     output = Dense(1)(output)
 
     model = Model(inputs=[first_input, second_input], outputs=output)
