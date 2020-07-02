@@ -3,6 +3,8 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Concatenate, Dense, LSTM, Input, Dropout
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import ModelCheckpoint
+from tensorflow.keras.callbacks import TensorBoard
+import os
 import pandas as pd
 import numpy as np
 
@@ -40,22 +42,23 @@ def LSTM_Model(all_X,
                all_y,
                EPOCHS=100,
                n=8760,
-               hours_prior=24):
+               hours_prior=24,
+               dropout=0.0):
 	
     reshape_input, dense_input_train, reshape_input_test, dense_input_test, shape,y_train = prep_lstm(all_X, all_y, n, hours_prior)
 
-    ###############################Mix Neural Net Arquitecture##############################################
+    ############################### Mixed Neural Net Arquitecture ##############################################
 
     first_input = Input(shape=(shape[1], 1))
-    seq = LSTM(units=20, dropout=0.1)(first_input)
+    seq = LSTM(units=20, dropout=dropout)(first_input)
     seq = Dense(40, activation=tf.nn.relu)(seq)
-    seq = Dropout(0.1)(seq)
+    seq = Dropout(dropout)(seq)
     second_input = Input(shape=(dense_input_train.shape[1], ))
     reg = Dense(40, activation=tf.nn.relu)(second_input)
-    reg = Dropout(0.1)(reg)
+    reg = Dropout(dropout)(reg)
     merged = Concatenate(axis=1)([seq, reg])
     output = Dense(80, activation=tf.nn.relu )(merged)
-    output=Dropout(0.1)(output)
+    output=Dropout(dropout)(output)
     output = Dense(1)(output)
 
     model = Model(inputs=[first_input, second_input], outputs=output)
@@ -69,8 +72,16 @@ def LSTM_Model(all_X,
     model.summary()
 
     checkpoint_name = 'checkpoints/Weights.hdf5' 
-    checkpoint = ModelCheckpoint(checkpoint_name, monitor='val_loss', verbose = 1, save_best_only = True, mode ='min')
-    callbacks_list = [checkpoint]
+
+    checkpoint = ModelCheckpoint(checkpoint_name, 
+                                monitor='val_loss',
+                                verbose = 1, 
+                                save_best_only = True, 
+                                mode ='min')
+
+    tensorboard = TensorBoard(log_dir=os.path.join('tensorboard'), histogram_freq=1)
+    
+    callbacks_list = [checkpoint, tensorboard]
 
     history = model.fit(
         [reshape_input, dense_input_train],

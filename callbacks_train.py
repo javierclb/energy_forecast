@@ -1,9 +1,5 @@
-
 from tensorflow.keras.callbacks import ModelCheckpoint
-from tensforflow.keras.utils import load_dataset,batch_generator, KLWeightScheduler, LearningRateSchedulerPerBatch,\
-    TensorBoardLR, DotDict, Logger
-
-
+from tensorflow.keras.callbacks import TensorBoard
 
 def get_callbacks_dict(model_params, experiment_path=''):
     """ create a dictionary of all used callbacks """
@@ -12,9 +8,11 @@ def get_callbacks_dict(model_params, experiment_path=''):
     callbacks_dict = {}
 
     # Checkpoints callback
-    callbacks_dict['model_checkpoint'] = ModelCheckpoint(filepath=os.path.join(experiment_path, 'checkpoints',
-                                                         'weights.{epoch:02d}-{val_loss:.2f}.hdf5'), monitor='val_loss',
-                                                         save_best_only=True, mode='min')
+    callbacks_dict["model_checkpoint"] = ModelCheckpoint('checkpoints/Weights.hdf5' , 
+                                monitor='val_loss',
+                                verbose = 1, 
+                                save_best_only = True, 
+                                mode ='min')
 
     # LR decay callback, modified to apply decay each batch as in original implementation
     callbacks_dict['lr_schedule'] = LearningRateSchedulerPerBatch(
@@ -27,7 +25,6 @@ def get_callbacks_dict(model_params, experiment_path=''):
                                        * model_params.kl_decay_rate ** step), verbose=1)
 
     # Tensorboard callback
-    callbacks_dict['tensorboard'] = TensorBoardLR(log_dir=os.path.join(experiment_path, 'tensorboard'),
-                                     update_freq=model_params.batch_size*25)
+    callback_dict["tensorboard"] = TensorBoard(log_dir=os.path.join('tensorboard'), histogram_freq=1)
 
     return callbacks_dict
