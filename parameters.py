@@ -32,5 +32,4 @@ params_dict = {
     'augment_stroke_prob': 0.10  # Point dropping augmentation proportion.
 }
 
-for key in params_dict:
-    setattr(Model_Parameters, key, params_dict[key])
+[setattr(Model_Parameters, key, params_dict[key]) for key in params_dict]

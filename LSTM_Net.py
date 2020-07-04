@@ -2,8 +2,7 @@ import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Concatenate, Dense, LSTM, Input, Dropout
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.callbacks import ModelCheckpoint
-from tensorflow.keras.callbacks import TensorBoard
+from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
 import os
 import pandas as pd
 import numpy as np
@@ -16,7 +15,7 @@ def norm(x, train_stats):
 def prep_lstm(all_X, all_y, n, hours_prior):
 
 	X_train, y_train = all_X[:-n], all_y[:-n]
-	X_test, y_test = all_X[-n:],all_y[-n:]
+	X_test, y_test = all_X[-n:], all_y[-n:]
 
 	train_stats = pd.DataFrame(X_train).describe().transpose()
 
@@ -58,7 +57,7 @@ def LSTM_Model(all_X,
     reg = Dropout(dropout)(reg)
     merged = Concatenate(axis=1)([seq, reg])
     output = Dense(80, activation=tf.nn.relu )(merged)
-    output=Dropout(dropout)(output)
+    output = Dropout(dropout)(output)
     output = Dense(1)(output)
 
     model = Model(inputs=[first_input, second_input], outputs=output)
