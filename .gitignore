@@ -131,4 +131,4 @@ dmypy.json
 Cases/*
 .log
 old/*
-tensorboard
+tensorboard/*
