@@ -7,9 +7,11 @@ params_dict = {
     'is_training': True,  # train mode (relevant only for accelerated LSTM mode)
     'data_set': 'cat',  # datasets to train on
     'epochs': 50,  # how many times to go over the full train set (on average, since batches are drawn randomly)
-    'best_only': True, # Batches between checkpoints creation and validation set evaluation. Once an epoch if None.
+    'save_best_only': True, # Batches between checkpoints creation and validation set evaluation. Once an epoch if None.
     'batch_size': 100,  # Minibatch size. Recommend leaving at 100.
-    'accelerate_LSTM': False,  # Flag for using CuDNNLSTM layer, gpu + tf backend only
+    'accelerate_LSTM': False,
+    'checkpoint': 'checkpoints/Weights.hdf5',
+    'tensorboard': 'tensorboard', # Flag for using CuDNNLSTM layer, gpu + tf backend only
     # Loss Params:
     'optimizer': 'adam',  # adam or sgd
     'learning_rate': 0.001,
