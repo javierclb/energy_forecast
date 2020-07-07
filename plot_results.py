@@ -18,5 +18,5 @@ def multi_step_plot(history, true_future, prediction):
   plt.xlabel("Hours")
   plt.ylabel("Energy Demand MWh")
   plt.title(f"24 hour ahead Demand forecast with error ={error}")
-  plt.ylim(0, 120)
+  #plt.ylim(0, 120)
   return plt
