@@ -5,9 +5,9 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.preprocessing.sequence import TimeseriesGenerator
 from tensorflow.keras.layers import (Concatenate, Dense, LSTM, Input, Dropout, LeakyReLU, 
                                      TimeDistributed, RepeatVector,
-                                     ConvLSTM2D, Flatten)
+                                     ConvLSTM2D, Flatten, BatchNormalization)
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
+from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard, ReduceLROnPlateau
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -32,13 +32,16 @@ def get_train_test(data, backward, forward, samples):
     return input_train, output_train, input_test, output_test, mean, std
 
 def build_model(backward, forward, dropout=0):
-    n, m = int(backward/24), int(backward/7)
+    n, m = int(backward/24), 24
     input_layer = Input(shape=(n, 1, m, 1))
-    seq = ConvLSTM2D(filters=64, kernel_size=(1,3), activation='relu')(input_layer)
+    seq = ConvLSTM2D(filters=128, kernel_size=(1,6), activation='tanh')(input_layer)
+    seq = BatchNormalization()(seq)
     seq = Flatten()(seq)
     seq = RepeatVector(24)(seq)
     seq = LSTM(units=200, dropout=dropout, return_sequences=True)(seq)
+    seq = BatchNormalization()(seq)
     seq = TimeDistributed(Dense(units=100, activation=tf.nn.relu))(seq)
+    seq = BatchNormalization()(seq)
     output_layer = TimeDistributed(Dropout(dropout))(seq)
     output_layer = TimeDistributed(Dense(1))(output_layer)
     model = Model(inputs=input_layer, outputs=output_layer)
@@ -49,7 +52,7 @@ def build_model(backward, forward, dropout=0):
 def train_model(input_train, output_train, epochs=10, dropout=0, train=True):
     n, bwd = input_train.shape
     fwd = output_train.shape[1]
-    input_train = input_train.reshape(n, int(bwd/24), 1, int(bwd/7), 1)
+    input_train = input_train.reshape(n, int(bwd/24), 1, 24, 1)
     model = build_model(bwd, fwd, dropout=dropout)
     optimizer = Adam()
     model.compile(
@@ -62,14 +65,26 @@ def train_model(input_train, output_train, epochs=10, dropout=0, train=True):
                             verbose = 1, 
                             save_best_only = True, 
                             mode ='min')
+
+    lr_scheduler = ReduceLROnPlateau(monitor='val_loss', factor=0.1, 
+                                    patience=10, verbose=1, min_lr=0.0001)
     
+    tensorboard = TensorBoard(log_dir="tensorboard", histogram_freq=1)
+
+
     if train:
         history = model.fit(input_train,
                     output_train,
                     epochs=epochs,
                     validation_split=0.3,
                     verbose=1,
-                    callbacks=[checkpoint])
+                    callbacks=[checkpoint, lr_scheduler, tensorboard])
+        
+        hist_df = pd.DataFrame(history.history) 
+        # save to json:  
+        hist_json_file = 'history.json' 
+        with open(hist_json_file, mode='w') as f:
+            hist_df.to_json(f)
     
     else:
         pass
@@ -78,7 +93,8 @@ def train_model(input_train, output_train, epochs=10, dropout=0, train=True):
 
     return model
 
-def model_predict(model, input_test, mean, std):
-    input_test_cnn = input_test.reshape(input_test.shape[0], 7, 1, 24, 1)
+def model_predict(model, input_test, mean, std, ):
+    n, m = input_test.shape
+    input_test_cnn = input_test.reshape(n, int(m/24), 1, 24, 1)
     pred = model.predict(input_test_cnn) * std + mean
     return pred
