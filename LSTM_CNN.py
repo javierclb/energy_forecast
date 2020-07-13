@@ -31,14 +31,16 @@ def get_train_test(data, backward, forward, samples):
     
     return input_train, output_train, input_test, output_test, mean, std
 
-def build_model(backward, forward, dropout=0):
+def build_model(backward:int, forward:int, dropout:float=0.0):
     n, m = int(backward/24), 24
     input_layer = Input(shape=(n, 1, m, 1))
-    seq = ConvLSTM2D(filters=128, kernel_size=(1,6), activation='tanh')(input_layer)
+    seq = ConvLSTM2D(filters=128, kernel_size=(1,6), activation='tanh', return_sequences=True)(input_layer)
+    seq = BatchNormalization()(seq)
+    seq = ConvLSTM2D(filters=64, kernel_size=(1,3), activation='tanh')(seq)
     seq = BatchNormalization()(seq)
     seq = Flatten()(seq)
-    seq = RepeatVector(24)(seq)
-    seq = LSTM(units=200, dropout=dropout, return_sequences=True)(seq)
+    seq = RepeatVector(forward)(seq)
+    seq = LSTM(units=100, return_sequences=True)(seq)
     seq = BatchNormalization()(seq)
     seq = TimeDistributed(Dense(units=100, activation=tf.nn.relu))(seq)
     seq = BatchNormalization()(seq)
@@ -49,7 +51,7 @@ def build_model(backward, forward, dropout=0):
     return model
 
 
-def train_model(input_train, output_train, epochs=10, dropout=0, train=True):
+def train_model(input_train, output_train, epochs:int=10, dropout:float=0.0, train:bool=True):
     n, bwd = input_train.shape
     fwd = output_train.shape[1]
     input_train = input_train.reshape(n, int(bwd/24), 1, 24, 1)
