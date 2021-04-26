@@ -132,3 +132,7 @@ Cases/*
 .log
 old/*
 tensorboard/*
+Old
+lightning_logs
+checkpoints
+*/*.ini

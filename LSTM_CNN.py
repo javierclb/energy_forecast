@@ -7,7 +7,7 @@ from tensorflow.keras.layers import (Concatenate, Dense, LSTM, Input, Dropout, L
                                      TimeDistributed, RepeatVector,
                                      ConvLSTM2D, Flatten, BatchNormalization)
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard, ReduceLROnPlateau
+from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard, ReduceLROnPlateau, EarlyStopping
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -18,8 +18,8 @@ def data_generator(data, backward, forward, mean, std):
     normalized = ((data - mean)/std)
     target, _ = TimeseriesGenerator(normalized, normalized, length=forward, batch_size=N)[0]
     input, output = TimeseriesGenerator(normalized[:-forward],
-                                 target, length=backward, 
-                                 batch_size=N-forward)[0]
+                                            target, length=backward, 
+                                            batch_size=N-forward)[0]
     return input, output
 
 def get_train_test(data, backward, forward, samples):
@@ -51,14 +51,14 @@ def build_model(backward:int, forward:int, dropout:float=0.0):
     return model
 
 
-def train_model(input_train, output_train, epochs:int=10, dropout:float=0.0, train:bool=True):
+def train_model(input_train, output_train, epochs:int=10, dropout:float=0.0, train:bool=True, batch_size:int=32):
     n, bwd = input_train.shape
     fwd = output_train.shape[1]
     input_train = input_train.reshape(n, int(bwd/24), 1, 24, 1)
     model = build_model(bwd, fwd, dropout=dropout)
     optimizer = Adam()
     model.compile(
-        loss="mean_squared_error",
+        loss=tf.keras.losses.Huber(),
         optimizer=optimizer)
 
     checkpoint_name = 'checkpoints/Weights.hdf5' 
@@ -67,20 +67,20 @@ def train_model(input_train, output_train, epochs:int=10, dropout:float=0.0, tra
                             verbose = 1, 
                             save_best_only = True, 
                             mode ='min')
-
-    lr_scheduler = ReduceLROnPlateau(monitor='val_loss', factor=0.1, 
-                                    patience=10, verbose=1, min_lr=0.0001)
     
     tensorboard = TensorBoard(log_dir="tensorboard", histogram_freq=1)
 
+    early_stopping = EarlyStopping(monitor='val_loss', patience=10)
+
+    lr_scheduler = ReduceLROnPlateau(monitor="val_loss", factor=0.1, patience=5, verbose=1, min_Lr=0.0001)
 
     if train:
         history = model.fit(input_train,
                     output_train,
                     epochs=epochs,
-                    validation_split=0.3,
+                    validation_split=0.3, batch_size=batch_size,
                     verbose=1,
-                    callbacks=[checkpoint, lr_scheduler, tensorboard])
+                    callbacks=[checkpoint, early_stopping, tensorboard, lr_scheduler],  workers=8, use_multiprocessing=True)
         
         hist_df = pd.DataFrame(history.history) 
         # save to json:  
